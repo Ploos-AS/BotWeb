@@ -1,0 +1,5 @@
+package server
+import("os";"path/filepath";"net/http/httptest";"strings";"testing")
+func testServer(t *testing.T)*Server{t.Helper();p:=filepath.Join(t.TempDir(),"bots.json");if err:=os.WriteFile(p,[]byte(`{"bots":[{"id":"x","name":"Example","transport":"unix","endpoint":"/secret/path.sock"}]}`),0600);err!=nil{t.Fatal(err)};s,e:=New(p);if e!=nil{t.Fatal(e)};return s}
+func TestIndexAndHeaders(t *testing.T){r:=httptest.NewRequest("GET","/",nil);w:=httptest.NewRecorder();testServer(t).Handler().ServeHTTP(w,r);if w.Code!=200{t.Fatal(w.Code)};if !strings.Contains(w.Body.String(),"PBMP fleet console"){t.Fatal("missing UI")};if w.Header().Get("Content-Security-Policy")==""{t.Fatal("missing CSP")}}
+func TestRegistryDoesNotLeakEndpoint(t *testing.T){r:=httptest.NewRequest("GET","/api/v1/bots",nil);w:=httptest.NewRecorder();testServer(t).Handler().ServeHTTP(w,r);if strings.Contains(w.Body.String(),"secret/path"){t.Fatal("endpoint leaked")}}
