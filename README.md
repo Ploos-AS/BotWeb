@@ -16,3 +16,6 @@ The backend binds to `127.0.0.1:8080` by default. Put an authenticated TLS rever
 Bot PBMP endpoints remain backend-only and are deliberately omitted from the browser-facing registry response.
 
 License: MIT.
+
+
+M1.3 wires the first optional PBMP capability end-to-end: bots advertising `channels.list` get a real Channels view. Bots without the capability do not expose that view.
