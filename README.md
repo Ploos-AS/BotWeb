@@ -1,25 +1,18 @@
 # BotWeb
 
-BotWeb is the shared web control plane for PBMP-compatible bots, initially LuCa and Engo.
+BotWeb is the shared web control plane for PBMP-compatible bots, initially LuCa and Engo. It is separate from bot processes: bots remain fully functional without BotWeb.
 
-BotWeb is intentionally separate from bot processes. Bots remain fully functional without it. The browser talks to the BotWeb backend; the backend talks to bots over authenticated PBMP transports.
+M1 provides a small Go backend, a registry for multiple bot instances, a PBMP/1 Unix-socket client, capability/status HTTP API, tests, CI and an Alpine OCI image.
 
-## M0 architecture
+## Run
 
-    Browser --HTTPS--> BotWeb backend --PBMP--> LuCa / Engo / other bots
+    cp bots.example.json bots.json
+    go run ./cmd/botweb -registry bots.json
 
-The backend maintains a registry of bot instances and discovers each instance's PBMP capabilities. The UI renders only supported functions.
+The backend binds to `127.0.0.1:8080` by default. Put an authenticated TLS reverse proxy in front before exposing it beyond localhost.
 
-## Planned M1
+Initial API: `/healthz`, `/api/v1/bots`, and per-bot `info`, `capabilities`, `networks`, `protocol` endpoints.
 
-* bot registry
-* PBMP/1 client
-* capability-driven dashboard
-* network/channel status
-* authentication and roles
-* live events/log view
-* Alpine OCI image
-
-See [docs/architecture.md](docs/architecture.md).
+Bot endpoint paths are backend-only and are deliberately omitted from the browser-facing registry response.
 
 License: MIT.

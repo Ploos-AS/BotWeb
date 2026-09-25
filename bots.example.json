@@ -1,0 +1,1 @@
+{"bots":[{"id":"luca-local","name":"LuCa local","transport":"unix","endpoint":"/tmp/luca.pbmp.sock"}]}

@@ -1,0 +1,3 @@
+package pbmp
+import("net";"path/filepath";"testing";"time")
+func TestCall(t *testing.T){p:=filepath.Join(t.TempDir(),"p.sock");l,e:=net.Listen("unix",p);if e!=nil{t.Fatal(e)};defer l.Close();go func(){c,_:=l.Accept();defer c.Close();b:=make([]byte,1024);c.Read(b);c.Write([]byte("{\"pbmp\":1,\"type\":\"response\",\"id\":\"botweb\",\"ok\":true,\"result\":{\"implementation\":\"test\"}}\n"))}();r,e:=(Client{Endpoint:p,Timeout:time.Second}).Call("bot.info");if e!=nil{t.Fatal(e)};if string(r)!="{\"implementation\":\"test\"}"{t.Fatalf("unexpected %s",r)}}
