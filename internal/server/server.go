@@ -1,8 +1,9 @@
 package server
 import("encoding/json";"net/http";"strings";"github.com/Ploos-AS/BotWeb/internal/pbmp";"github.com/Ploos-AS/BotWeb/internal/registry")
-type Server struct{r registry.Registry}
-func New(path string)(*Server,error){r,e:=registry.Load(path);return &Server{r:r},e}
-func(s *Server)Handler()http.Handler{m:=http.NewServeMux();m.HandleFunc("GET /",s.index);m.HandleFunc("GET /app.css",assetCSS);m.HandleFunc("GET /app.js",assetJS);m.HandleFunc("GET /healthz",func(w http.ResponseWriter,_ *http.Request){w.Header().Set("Content-Type","application/json");w.Write([]byte("{\"ok\":true}\n"))});m.HandleFunc("GET /api/v1/bots",s.bots);m.HandleFunc("GET /api/v1/bots/",s.bot);m.HandleFunc("POST /api/v1/bots/",s.botAction);return securityHeaders(m)}
+type Server struct{r registry.Registry;auth AuthConfig}
+func New(path string)(*Server,error){return NewWithAuth(path,AuthConfig{})}
+func NewWithAuth(path string,auth AuthConfig)(*Server,error){r,e:=registry.Load(path);return &Server{r:r,auth:auth},e}
+func(s *Server)Handler()http.Handler{m:=http.NewServeMux();m.HandleFunc("GET /",s.index);m.HandleFunc("GET /app.css",assetCSS);m.HandleFunc("GET /app.js",assetJS);m.HandleFunc("GET /healthz",func(w http.ResponseWriter,_ *http.Request){w.Header().Set("Content-Type","application/json");w.Write([]byte("{\"ok\":true}\n"))});m.HandleFunc("GET /api/v1/bots",s.bots);m.HandleFunc("GET /api/v1/bots/",s.bot);m.HandleFunc("POST /api/v1/bots/",s.botAction);return securityHeaders(authMiddleware(s.auth,m))}
 func securityHeaders(next http.Handler)http.Handler{return http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){w.Header().Set("X-Content-Type-Options","nosniff");w.Header().Set("X-Frame-Options","DENY");w.Header().Set("Referrer-Policy","no-referrer");w.Header().Set("Content-Security-Policy","default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; frame-ancestors 'none'");next.ServeHTTP(w,r)})}
 func(s *Server)index(w http.ResponseWriter,r *http.Request){if r.URL.Path!="/"&&!strings.HasPrefix(r.URL.Path,"/bots/"){http.NotFound(w,r);return};w.Header().Set("Content-Type","text/html; charset=utf-8");w.Write([]byte(indexHTML))}
 func(s *Server)bots(w http.ResponseWriter,_ *http.Request){type safe struct{ID string `json:"id"`;Name string `json:"name"`;Transport string `json:"transport"`};v:=make([]safe,0,len(s.r.Bots));for _,b:=range s.r.Bots{v=append(v,safe{b.ID,b.Name,b.Transport})};write(w,v)}
