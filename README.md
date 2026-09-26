@@ -103,3 +103,12 @@ The M2.7 privacy boundary remains part of the schema contract: audit records do 
 `GET /metrics` exposes a small Prometheus-compatible operational surface for BotWeb itself. It currently reports the number of configured bots, PBMP request totals split only by bounded `result=ok|error`, and aggregate PBMP request duration.
 
 Metrics intentionally avoid bot IDs, network/channel names, module IDs, users, authentication material and other high-cardinality or sensitive labels. Per-bot operational detail remains available through the authenticated BotWeb/PBMP views rather than Prometheus labels.
+
+
+## M2.10 liveness and readiness
+
+`GET /healthz` is the liveness endpoint: it reports that the BotWeb HTTP process is alive and does not depend on bot availability.
+
+`GET /readyz` is the readiness endpoint. For configured Unix/PBMP bots, BotWeb probes `pbmp.info` and reports the number configured, checked and reachable. Readiness returns HTTP 200 when at least one configured Unix/PBMP bot is reachable, and HTTP 503 when bots are configured but none of the supported PBMP endpoints respond. An intentionally empty registry is ready.
+
+This split is suitable for container and orchestrator health checks without turning a transient bot outage into a BotWeb process restart.
