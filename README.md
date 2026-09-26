@@ -51,3 +51,12 @@ Bearer authentication remains supported for API clients and automation. Browser 
 Cookie-authenticated state-changing requests require the CSRF token associated with the server-side session. Bearer-authenticated API clients are not subject to browser CSRF validation.
 
 BotWeb ignores `X-Forwarded-Proto` by default. Set `BOTWEB_TRUST_PROXY=1` only when BotWeb is directly behind a trusted reverse proxy that overwrites forwarded headers. In that mode, `X-Forwarded-Proto: https` allows BotWeb to mark session cookies `Secure` when TLS terminates at the proxy. Never enable proxy trust when clients can reach BotWeb directly and supply their own forwarded headers.
+
+
+## M2.4 session lifecycle and audit
+
+`GET /api/v1/session` exposes the current role and session lifetime to the authenticated UI. It never exposes the session identifier. Cookie sessions also receive their CSRF token so same-origin browser code can authorize state-changing requests.
+
+Operators can rotate a cookie session through `POST /api/v1/session/rotate`; rotation invalidates the old session identifier, generates a new identifier and CSRF token, and renews the 12-hour expiry. Logout revokes the server-side session.
+
+Security audit events record session rotation/logout event types and roles only. BotWeb MUST NOT log bearer tokens, session identifiers, cookies, or CSRF tokens.
