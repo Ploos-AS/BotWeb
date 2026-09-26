@@ -44,3 +44,10 @@ Tokens protect BotWeb itself; they are not PBMP credentials and are never sent t
 When authentication is configured, browser requests without a session are redirected to `/login`. A configured viewer or operator token can be exchanged for a short-lived server-side session. The browser cookie contains only a cryptographically random session identifier, is `HttpOnly`, uses `SameSite=Strict`, and is marked `Secure` when BotWeb itself receives HTTPS. Sessions expire after 12 hours and can be invalidated through `POST /logout`.
 
 Bearer authentication remains supported for API clients and automation. Browser sessions are a BotWeb concern only and do not alter PBMP or managed-bot authentication.
+
+
+## M2.3 CSRF and reverse-proxy hardening
+
+Cookie-authenticated state-changing requests require the CSRF token associated with the server-side session. Bearer-authenticated API clients are not subject to browser CSRF validation.
+
+BotWeb ignores `X-Forwarded-Proto` by default. Set `BOTWEB_TRUST_PROXY=1` only when BotWeb is directly behind a trusted reverse proxy that overwrites forwarded headers. In that mode, `X-Forwarded-Proto: https` allows BotWeb to mark session cookies `Secure` when TLS terminates at the proxy. Never enable proxy trust when clients can reach BotWeb directly and supply their own forwarded headers.
