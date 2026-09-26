@@ -125,3 +125,14 @@ BotWeb keeps liveness, readiness and metrics deliberately separate:
 Readiness and Prometheus data intentionally avoid bot names, PBMP socket paths, networks, channels, module identifiers and user data. The latest readiness probe also updates the bounded `botweb_bots_checked` and `botweb_bots_reachable` gauges.
 
 A minimal container deployment can use `/healthz` to decide whether the BotWeb process should be restarted and `/readyz` to decide whether it should receive management traffic. These two signals must not be treated as interchangeable.
+
+
+## M2.20 security and readiness contract
+
+Authentication identity is based only on credentials that BotWeb has successfully verified. Merely supplying an `Authorization` header does not classify a request as bearer-authenticated: an invalid bearer token may fall back to a valid browser session, and cookie-authenticated writes still require that session's CSRF token. This includes browser logout.
+
+Browser login and JSON management writes enforce same-origin requests when an `Origin` header is present. HTTPS origins behind a reverse proxy are recognized only when `BOTWEB_TRUST_PROXY=1`; forwarded protocol headers are otherwise ignored. The CSP also restricts form submission to `'self'`.
+
+A successful login replaces and invalidates an existing BotWeb session cookie. Session creation opportunistically removes expired server-side sessions, while explicit rotation changes both the session identifier and CSRF token.
+
+Readiness probes are concurrent and bounded by the PBMP client timeout. `/readyz` remains an unauthenticated aggregate endpoint and never exposes bot identifiers or socket paths. Its latest result feeds the bounded `botweb_bots_checked` and `botweb_bots_reachable` Prometheus gauges; `/metrics` itself remains authenticated when BotWeb authentication is enabled.
