@@ -25,3 +25,15 @@ License: MIT.
 M1.3 wires the first optional PBMP capability end-to-end: bots advertising `channels.list` get a real Channels view. Bots without the capability do not expose that view.
 
 M1.6 adds a generic, read-only BotAI status view for bots advertising the optional PBMP `botai.status` capability. BotWeb never connects to BotAI directly; see `docs/M1.6-botai.md`.
+
+
+## M2.1 authentication and roles
+
+BotWeb supports optional bearer-token authentication at the web control-plane boundary.
+
+- `BOTWEB_VIEWER_TOKEN` grants read-only access.
+- `BOTWEB_OPERATOR_TOKEN` grants read and write access.
+- `/healthz` remains unauthenticated for local/container health checks.
+- With neither token configured, BotWeb retains the simple development mode but refuses a non-loopback `-listen` address.
+
+Tokens protect BotWeb itself; they are not PBMP credentials and are never sent to managed bots. For remote deployments, configure at least one token and terminate TLS at an authenticated reverse proxy. BotWeb remains optional: managed bots continue operating independently when it is absent.
