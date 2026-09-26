@@ -27,7 +27,7 @@ func(c AuthConfig) role(token string)string{if c.OperatorToken!=""&&secureEqual(
 func secureEqual(a,b string)bool{if len(a)!=len(b){return false};return subtle.ConstantTimeCompare([]byte(a),[]byte(b))==1}
 func bearerToken(r *http.Request)string{v:=r.Header.Get("Authorization");if !strings.HasPrefix(v,"Bearer "){return ""};return strings.TrimSpace(strings.TrimPrefix(v,"Bearer "))}
 func randomToken()(string,error){b:=make([]byte,32);if _,e:=rand.Read(b);e!=nil{return "",e};return base64.RawURLEncoding.EncodeToString(b),nil}
-func(s *sessionStore)create(role string)(string,error){id,e:=randomToken();if e!=nil{return "",e};csrf,e:=randomToken();if e!=nil{return "",e};s.mu.Lock();now:=time.Now();s.values[id]=session{role:role,csrf:csrf,created:now,expires:now.Add(12*time.Hour)};s.mu.Unlock();return id,nil}
+func(s *sessionStore)create(role string)(string,error){id,e:=randomToken();if e!=nil{return "",e};csrf,e:=randomToken();if e!=nil{return "",e};s.mu.Lock();now:=time.Now();for k,v:=range s.values{if now.After(v.expires){delete(s.values,k)}};s.values[id]=session{role:role,csrf:csrf,created:now,expires:now.Add(12*time.Hour)};s.mu.Unlock();return id,nil}
 func(s *sessionStore)get(id string)(session,bool){s.mu.Lock();defer s.mu.Unlock();v,ok:=s.values[id];if !ok{return session{},false};if time.Now().After(v.expires){delete(s.values,id);return session{},false};return v,true}
 func(s *sessionStore)role(id string)string{v,ok:=s.get(id);if !ok{return ""};return v.role}
 func(s *sessionStore)delete(id string){s.mu.Lock();delete(s.values,id);s.mu.Unlock()}
