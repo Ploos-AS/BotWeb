@@ -72,3 +72,6 @@ func TestReadyzUnauthenticatedWhenAuthEnabled(t *testing.T){s:=testServer(t);s.a
 
 
 func TestOperationalEndpointAuthContract(t *testing.T){s:=testServer(t);s.auth=AuthConfig{ViewerToken:"view",OperatorToken:"op"};for _,path:=range []string{"/healthz","/readyz"}{r:=httptest.NewRequest("GET",path,nil);w:=httptest.NewRecorder();s.Handler().ServeHTTP(w,r);if w.Code==http.StatusSeeOther||w.Code==http.StatusUnauthorized{t.Fatalf("%s unexpectedly requires authentication: %d",path,w.Code)}};r:=httptest.NewRequest("GET","/metrics",nil);w:=httptest.NewRecorder();s.Handler().ServeHTTP(w,r);if w.Code!=http.StatusSeeOther{t.Fatalf("metrics status=%d, want redirect to login",w.Code)}}
+
+
+func TestBrowserLogoutUsesCSRFHeader(t *testing.T){if !strings.Contains(indexHTML,`id="logout"`){t.Fatal("logout button missing")};if strings.Contains(indexHTML,`action="/logout"`){t.Fatal("logout still uses plain form POST")};if !strings.Contains(js,`fetch('/logout'` )||!strings.Contains(js,`'X-CSRF-Token':session.csrf_token`){t.Fatal("browser logout does not send session CSRF token")}}
