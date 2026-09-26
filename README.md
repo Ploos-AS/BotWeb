@@ -69,3 +69,12 @@ The browser frontend bootstraps its authenticated role and CSRF token from `GET 
 Viewer sessions retain read-only fleet, bot, channel, module, metrics, logs, BotAI and safe configuration views, but write controls such as channel join/part and module lifecycle actions are not rendered. Operator sessions receive those controls only when the managed bot also advertises the corresponding PBMP capability.
 
 The unauthenticated loopback development mode retains the pre-auth local management behavior. Authentication and authorization remain BotWeb concerns and do not change the standalone-first PBMP bot contract.
+
+
+## M2.6 session UX hardening
+
+Authenticated browser sessions now surface their effective role in the header. Viewer sessions are explicitly marked `read-only`.
+
+API responses with HTTP 401 are treated as an expired/revoked browser session and redirect the browser to `/login`. Operator sessions can rotate themselves from the header; the UI then reloads session metadata so subsequent writes use the newly generated CSRF token.
+
+The rotation control is not shown to viewers or in unauthenticated loopback development mode.
