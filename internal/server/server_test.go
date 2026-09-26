@@ -74,3 +74,7 @@ func TestOperationalEndpointAuthContract(t *testing.T){s:=testServer(t);s.auth=A
 
 
 func TestBrowserLogoutUsesCSRFHeader(t *testing.T){if !strings.Contains(indexHTML,`id="logout"`){t.Fatal("logout button missing")};if strings.Contains(indexHTML,`action="/logout"`){t.Fatal("logout still uses plain form POST")};if !strings.Contains(js,`fetch('/logout'` )||!strings.Contains(js,`'X-CSRF-Token':session.csrf_token`){t.Fatal("browser logout does not send session CSRF token")}}
+
+
+func TestLoginRejectsCrossOrigin(t *testing.T){s:=testServer(t);s.auth=AuthConfig{ViewerToken:"view"};r:=httptest.NewRequest("POST","http://botweb.local/login",strings.NewReader("token=view"));r.Host="botweb.local";r.Header.Set("Content-Type","application/x-www-form-urlencoded");r.Header.Set("Origin","https://evil.example");w:=httptest.NewRecorder();s.Handler().ServeHTTP(w,r);if w.Code!=http.StatusForbidden{t.Fatalf("status=%d",w.Code)}}
+func TestLoginAcceptsTrustedProxyHTTPSOrigin(t *testing.T){s:=testServer(t);s.auth=AuthConfig{ViewerToken:"view",TrustProxy:true};r:=httptest.NewRequest("POST","http://botweb.local/login",strings.NewReader("token=view"));r.Host="botweb.local";r.Header.Set("Content-Type","application/x-www-form-urlencoded");r.Header.Set("Origin","https://botweb.local");r.Header.Set("X-Forwarded-Proto","https");w:=httptest.NewRecorder();s.Handler().ServeHTTP(w,r);if w.Code!=http.StatusSeeOther{t.Fatalf("status=%d body=%s",w.Code,w.Body.String())}}
