@@ -96,3 +96,10 @@ BotWeb emits audit records as single-line JSON using the versioned schema `botwe
 Management operations and session lifecycle events use the same format. This makes the stream suitable for structured log collectors such as Vector, Fluent Bit and Loki pipelines without parsing human-oriented log text.
 
 The M2.7 privacy boundary remains part of the schema contract: audit records do not add tokens, cookies, session IDs, CSRF values, request payloads, channel/network names, module IDs or IRC content.
+
+
+## M2.9 operational metrics
+
+`GET /metrics` exposes a small Prometheus-compatible operational surface for BotWeb itself. It currently reports the number of configured bots, PBMP request totals split only by bounded `result=ok|error`, and aggregate PBMP request duration.
+
+Metrics intentionally avoid bot IDs, network/channel names, module IDs, users, authentication material and other high-cardinality or sensitive labels. Per-bot operational detail remains available through the authenticated BotWeb/PBMP views rather than Prometheus labels.
