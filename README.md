@@ -87,3 +87,12 @@ State-changing PBMP management operations emit minimal audit events after author
 The role and authentication method are attached to the request context by the authentication middleware after credentials have been validated; audit code does not re-parse or re-authenticate credentials.
 
 Audit events intentionally exclude channel names, network names, module identifiers, reasons, request payloads, IRC content, bearer tokens, cookies, session identifiers and CSRF tokens.
+
+
+## M2.8 structured audit events
+
+BotWeb emits audit records as single-line JSON using the versioned schema `botweb.audit.v1`. The stable fields are `schema`, `event`, optional `bot`, `result`, optional `auth`, and optional `role`.
+
+Management operations and session lifecycle events use the same format. This makes the stream suitable for structured log collectors such as Vector, Fluent Bit and Loki pipelines without parsing human-oriented log text.
+
+The M2.7 privacy boundary remains part of the schema contract: audit records do not add tokens, cookies, session IDs, CSRF values, request payloads, channel/network names, module IDs or IRC content.
