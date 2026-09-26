@@ -112,3 +112,16 @@ Metrics intentionally avoid bot IDs, network/channel names, module IDs, users, a
 `GET /readyz` is the readiness endpoint. For configured Unix/PBMP bots, BotWeb probes `pbmp.info` and reports the number configured, checked and reachable. Readiness returns HTTP 200 when at least one configured Unix/PBMP bot is reachable, and HTTP 503 when bots are configured but none of the supported PBMP endpoints respond. An intentionally empty registry is ready.
 
 This split is suitable for container and orchestrator health checks without turning a transient bot outage into a BotWeb process restart.
+
+
+## M2.16 operational endpoint contract
+
+BotWeb keeps liveness, readiness and metrics deliberately separate:
+
+- `GET /healthz` is public and cheap. Use it for Docker `HEALTHCHECK` or an orchestrator liveness probe. A bot outage does not make liveness fail.
+- `GET /readyz` is public and exposes aggregate counts only. PBMP probes run concurrently and use the PBMP client's bounded timeout, so readiness latency does not grow linearly with the number of unavailable bots. Use it for an orchestrator readiness probe.
+- `GET /metrics` remains authenticated when BotWeb authentication is enabled. Prometheus should scrape it with a BotWeb viewer/operator credential or through an authenticated trusted proxy.
+
+Readiness and Prometheus data intentionally avoid bot names, PBMP socket paths, networks, channels, module identifiers and user data. The latest readiness probe also updates the bounded `botweb_bots_checked` and `botweb_bots_reachable` gauges.
+
+A minimal container deployment can use `/healthz` to decide whether the BotWeb process should be restarted and `/readyz` to decide whether it should receive management traffic. These two signals must not be treated as interchangeable.
