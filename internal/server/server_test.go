@@ -66,3 +66,6 @@ func TestLoginReplacesExistingSession(t *testing.T){s:=testServer(t);s.auth=Auth
 
 
 func TestReadyzConcurrentProbeLatency(t *testing.T){dir:=t.TempDir();p:=filepath.Join(dir,"bots.json");bots:=[]byte(`{"bots":[{"id":"a","name":"A","transport":"unix","endpoint":"`+filepath.Join(dir,"a.sock")+ `"},{"id":"b","name":"B","transport":"unix","endpoint":"`+filepath.Join(dir,"b.sock")+ `"},{"id":"c","name":"C","transport":"unix","endpoint":"`+filepath.Join(dir,"c.sock")+ `"}]}`);if e:=os.WriteFile(p,bots,0600);e!=nil{t.Fatal(e)};s,e:=New(p);if e!=nil{t.Fatal(e)};start:=time.Now();r:=httptest.NewRequest("GET","/readyz",nil);w:=httptest.NewRecorder();s.Handler().ServeHTTP(w,r);elapsed:=time.Since(start);if w.Code!=http.StatusServiceUnavailable{t.Fatalf("status=%d body=%s",w.Code,w.Body.String())};if elapsed>3*time.Second{t.Fatalf("readiness probes appear sequential: %s",elapsed)}}
+
+
+func TestReadyzUnauthenticatedWhenAuthEnabled(t *testing.T){s:=testServer(t);s.auth=AuthConfig{ViewerToken:"view",OperatorToken:"op"};r:=httptest.NewRequest("GET","/readyz",nil);w:=httptest.NewRecorder();s.Handler().ServeHTTP(w,r);if w.Code==http.StatusSeeOther||w.Code==http.StatusUnauthorized{t.Fatalf("readiness unexpectedly requires authentication: %d",w.Code)}}
