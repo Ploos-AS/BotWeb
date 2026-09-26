@@ -9,3 +9,10 @@ func TestCapabilityNavigationIsGeneric(t *testing.T){r:=httptest.NewRequest("GET
 
 func TestWriteRequiresJSON(t *testing.T){r:=httptest.NewRequest("POST","/api/v1/bots/x/channels/join",strings.NewReader("{}"));w:=httptest.NewRecorder();testServer(t).Handler().ServeHTTP(w,r);if w.Code!=http.StatusForbidden{t.Fatalf("code=%d",w.Code)}}
 func TestWriteRejectsCrossOrigin(t *testing.T){r:=httptest.NewRequest("POST","http://botweb.local/api/v1/bots/x/channels/join",strings.NewReader("{}"));r.Host="botweb.local";r.Header.Set("Content-Type","application/json");r.Header.Set("Origin","https://evil.example");w:=httptest.NewRecorder();testServer(t).Handler().ServeHTTP(w,r);if w.Code!=http.StatusForbidden{t.Fatalf("code=%d",w.Code)}}
+
+
+func TestBotAIUIIsCapabilityDriven(t *testing.T){
+	r:=httptest.NewRequest("GET","/app.js",nil);w:=httptest.NewRecorder();testServer(t).Handler().ServeHTTP(w,r);body:=w.Body.String()
+	if !strings.Contains(body,"botai.status")||!strings.Contains(body,"/botai"){t.Fatal("missing BotAI capability view")}
+	if strings.Contains(body,"implementation==='engo'"){t.Fatal("Engo-specific BotAI UI branch")}
+}
