@@ -78,3 +78,12 @@ Authenticated browser sessions now surface their effective role in the header. V
 API responses with HTTP 401 are treated as an expired/revoked browser session and redirect the browser to `/login`. Operator sessions can rotate themselves from the header; the UI then reloads session metadata so subsequent writes use the newly generated CSRF token.
 
 The rotation control is not shown to viewers or in unauthenticated loopback development mode.
+
+
+## M2.7 management audit observability
+
+State-changing PBMP management operations emit minimal audit events after authorization. Events contain only the operation name, BotWeb bot ID, result, verified authentication method and verified role.
+
+The role and authentication method are attached to the request context by the authentication middleware after credentials have been validated; audit code does not re-parse or re-authenticate credentials.
+
+Audit events intentionally exclude channel names, network names, module identifiers, reasons, request payloads, IRC content, bearer tokens, cookies, session identifiers and CSRF tokens.
