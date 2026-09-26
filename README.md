@@ -60,3 +60,12 @@ BotWeb ignores `X-Forwarded-Proto` by default. Set `BOTWEB_TRUST_PROXY=1` only w
 Operators can rotate a cookie session through `POST /api/v1/session/rotate`; rotation invalidates the old session identifier, generates a new identifier and CSRF token, and renews the 12-hour expiry. Logout revokes the server-side session.
 
 Security audit events record session rotation/logout event types and roles only. BotWeb MUST NOT log bearer tokens, session identifiers, cookies, or CSRF tokens.
+
+
+## M2.5 authenticated management UI
+
+The browser frontend bootstraps its authenticated role and CSRF token from `GET /api/v1/session`. Cookie-authenticated management POSTs automatically include `X-CSRF-Token`.
+
+Viewer sessions retain read-only fleet, bot, channel, module, metrics, logs, BotAI and safe configuration views, but write controls such as channel join/part and module lifecycle actions are not rendered. Operator sessions receive those controls only when the managed bot also advertises the corresponding PBMP capability.
+
+The unauthenticated loopback development mode retains the pre-auth local management behavior. Authentication and authorization remain BotWeb concerns and do not change the standalone-first PBMP bot contract.
