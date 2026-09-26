@@ -16,3 +16,9 @@ func TestBotAIUIIsCapabilityDriven(t *testing.T){
 	if !strings.Contains(body,"botai.status")||!strings.Contains(body,"/botai"){t.Fatal("missing BotAI capability view")}
 	if strings.Contains(body,"implementation==='engo'"){t.Fatal("Engo-specific BotAI UI branch")}
 }
+
+
+func TestAuthViewerCanRead(t *testing.T){s:=testServer(t);s.auth=AuthConfig{ViewerToken:"view",OperatorToken:"operate"};r:=httptest.NewRequest("GET","/",nil);r.Header.Set("Authorization","Bearer view");w:=httptest.NewRecorder();s.Handler().ServeHTTP(w,r);if w.Code!=http.StatusOK{t.Fatalf("code=%d",w.Code)}}
+func TestAuthRejectsMissingToken(t *testing.T){s:=testServer(t);s.auth=AuthConfig{ViewerToken:"view"};r:=httptest.NewRequest("GET","/",nil);w:=httptest.NewRecorder();s.Handler().ServeHTTP(w,r);if w.Code!=http.StatusUnauthorized{t.Fatalf("code=%d",w.Code)}}
+func TestViewerCannotWrite(t *testing.T){s:=testServer(t);s.auth=AuthConfig{ViewerToken:"view",OperatorToken:"operate"};r:=httptest.NewRequest("POST","/api/v1/bots/x/channels/join",strings.NewReader("{}"));r.Header.Set("Authorization","Bearer view");r.Header.Set("Content-Type","application/json");w:=httptest.NewRecorder();s.Handler().ServeHTTP(w,r);if w.Code!=http.StatusForbidden{t.Fatalf("code=%d",w.Code)}}
+func TestHealthDoesNotRequireAuth(t *testing.T){s:=testServer(t);s.auth=AuthConfig{ViewerToken:"view"};r:=httptest.NewRequest("GET","/healthz",nil);w:=httptest.NewRecorder();s.Handler().ServeHTTP(w,r);if w.Code!=http.StatusOK{t.Fatalf("code=%d",w.Code)}}
