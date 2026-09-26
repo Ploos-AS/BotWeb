@@ -69,3 +69,6 @@ func TestReadyzConcurrentProbeLatency(t *testing.T){dir:=t.TempDir();p:=filepath
 
 
 func TestReadyzUnauthenticatedWhenAuthEnabled(t *testing.T){s:=testServer(t);s.auth=AuthConfig{ViewerToken:"view",OperatorToken:"op"};r:=httptest.NewRequest("GET","/readyz",nil);w:=httptest.NewRecorder();s.Handler().ServeHTTP(w,r);if w.Code==http.StatusSeeOther||w.Code==http.StatusUnauthorized{t.Fatalf("readiness unexpectedly requires authentication: %d",w.Code)}}
+
+
+func TestOperationalEndpointAuthContract(t *testing.T){s:=testServer(t);s.auth=AuthConfig{ViewerToken:"view",OperatorToken:"op"};for _,path:=range []string{"/healthz","/readyz"}{r:=httptest.NewRequest("GET",path,nil);w:=httptest.NewRecorder();s.Handler().ServeHTTP(w,r);if w.Code==http.StatusSeeOther||w.Code==http.StatusUnauthorized{t.Fatalf("%s unexpectedly requires authentication: %d",path,w.Code)}};r:=httptest.NewRequest("GET","/metrics",nil);w:=httptest.NewRecorder();s.Handler().ServeHTTP(w,r);if w.Code!=http.StatusSeeOther{t.Fatalf("metrics status=%d, want redirect to login",w.Code)}}
