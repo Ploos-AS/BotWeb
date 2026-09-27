@@ -155,3 +155,10 @@ The process handles SIGINT and SIGTERM with graceful HTTP shutdown. Active reque
 Browser login uses a bounded in-memory global failure limiter. Ten failed credential attempts are allowed in a rolling one-minute window; further invalid credentials receive HTTP 429 with `Retry-After: 60`. A valid credential is still accepted while the failure limiter is active and clears the accumulated failures, avoiding an administrative lockout after an attack or typing mistakes.
 
 The limiter deliberately does not key state by client IP, forwarded address, username, or token. This keeps state bounded, avoids trusting spoofable forwarding headers, and avoids adding identifying or high-cardinality dimensions. Throttled requests are exposed through the authenticated Prometheus endpoint as the label-free counter `botweb_login_throttled_total`.
+
+
+## M2.38 request resource limits
+
+BotWeb applies explicit request-size limits in addition to its HTTP timeouts. Browser login form bodies are capped at 4 KiB and oversized login requests return HTTP 413. The HTTP server caps request headers at 16 KiB. These limits are regression-tested and are intended to keep unauthenticated request processing bounded while remaining ample for BotWeb's small session cookie, bearer token, and API headers.
+
+Deployments behind a reverse proxy should configure compatible or stricter edge limits. The application limits remain authoritative even when the proxy permits larger requests.
