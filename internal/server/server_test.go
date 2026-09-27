@@ -90,3 +90,6 @@ func TestLoginRequiresFormContentType(t *testing.T){s:=testServer(t);s.auth=Auth
 
 
 func TestLoginIgnoresQueryCredentialField(t *testing.T){s:=testServer(t);s.auth=AuthConfig{ViewerToken:"body-value"};r:=httptest.NewRequest("POST","http://botweb.local/login?token=query-sentinel",strings.NewReader("token=body-value"));r.Host="botweb.local";r.Header.Set("Content-Type","application/x-www-form-urlencoded");w:=httptest.NewRecorder();s.Handler().ServeHTTP(w,r);if w.Code!=http.StatusSeeOther{t.Fatalf("status=%d, want 303",w.Code)}}
+
+
+func TestSessionEndpointsAreNoStore(t *testing.T){s:=testServer(t);s.auth=AuthConfig{ViewerToken:"view",OperatorToken:"op"};cases:=[]struct{method,path,body,token string}{{"GET","/login","",""},{"POST","/login","token=view",""},{"GET","/api/v1/session","","view"}};for _,tc:=range cases{r:=httptest.NewRequest(tc.method,"http://botweb.local"+tc.path,strings.NewReader(tc.body));r.Host="botweb.local";if tc.body!=""{r.Header.Set("Content-Type","application/x-www-form-urlencoded")};if tc.token!=""{r.Header.Set("Authorization","Bearer "+tc.token)};w:=httptest.NewRecorder();s.Handler().ServeHTTP(w,r);if got:=w.Header().Get("Cache-Control");got!="no-store"{t.Fatalf("%s %s Cache-Control=%q",tc.method,tc.path,got)}}}
