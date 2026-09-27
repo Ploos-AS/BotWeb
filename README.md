@@ -136,3 +136,8 @@ Browser login and JSON management writes enforce same-origin requests when an `O
 A successful login replaces and invalidates an existing BotWeb session cookie. Session creation opportunistically removes expired server-side sessions, while explicit rotation changes both the session identifier and CSRF token.
 
 Readiness probes are concurrent and bounded by the PBMP client timeout. `/readyz` remains an unauthenticated aggregate endpoint and never exposes bot identifiers or socket paths. Its latest result feeds the bounded `botweb_bots_checked` and `botweb_bots_reachable` Prometheus gauges; `/metrics` itself remains authenticated when BotWeb authentication is enabled.
+
+
+## M2.21 PBMP readiness contract
+
+BotWeb readiness deliberately probes `pbmp.info`. PBMP/1 M0 defines `pbmp.info` as a required method, not an optional advertised capability, so a conforming PBMP/1 M0 bot endpoint can be probed without capability discovery first. The readiness method is named and regression-tested in BotWeb to prevent accidental replacement with an optional PBMP capability.
