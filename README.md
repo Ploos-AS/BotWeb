@@ -141,3 +141,10 @@ Readiness probes are concurrent and bounded by the PBMP client timeout. `/readyz
 ## M2.21 PBMP readiness contract
 
 BotWeb readiness deliberately probes `pbmp.info`. PBMP/1 M0 defines `pbmp.info` as a required method, not an optional advertised capability, so a conforming PBMP/1 M0 bot endpoint can be probed without capability discovery first. The readiness method is named and regression-tested in BotWeb to prevent accidental replacement with an optional PBMP capability.
+
+
+## M2.28 HTTP lifecycle contract
+
+BotWeb runs with explicit HTTP server limits: a 5 second request-header timeout, 15 second read timeout, 30 second write timeout, and 60 second idle timeout. These values are regression-tested rather than relying on the unbounded Go HTTP defaults.
+
+The process handles SIGINT and SIGTERM with graceful HTTP shutdown. Active requests receive up to 10 seconds to complete before shutdown returns. A normal `http.ErrServerClosed` result is treated as an expected process stop rather than a fatal server error. This makes the same lifecycle suitable for direct service managers and OCI/container orchestration.
