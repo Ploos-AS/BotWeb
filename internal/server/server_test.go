@@ -87,3 +87,6 @@ func TestReadinessUpdatesAggregateMetrics(t *testing.T){s:=testServer(t);r:=http
 
 
 func TestLoginRequiresFormContentType(t *testing.T){s:=testServer(t);s.auth=AuthConfig{ViewerToken:"view"};r:=httptest.NewRequest("POST","http://botweb.local/login",strings.NewReader("token=view"));r.Host="botweb.local";r.Header.Set("Content-Type","text/plain");w:=httptest.NewRecorder();s.Handler().ServeHTTP(w,r);if w.Code!=http.StatusUnsupportedMediaType{t.Fatalf("status=%d, want 415",w.Code)}}
+
+
+func TestLoginIgnoresQueryCredentialField(t *testing.T){s:=testServer(t);s.auth=AuthConfig{ViewerToken:"body-value"};r:=httptest.NewRequest("POST","http://botweb.local/login?token=query-sentinel",strings.NewReader("token=body-value"));r.Host="botweb.local";r.Header.Set("Content-Type","application/x-www-form-urlencoded");w:=httptest.NewRecorder();s.Handler().ServeHTTP(w,r);if w.Code!=http.StatusSeeOther{t.Fatalf("status=%d, want 303",w.Code)}}
