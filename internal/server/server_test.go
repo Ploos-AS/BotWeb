@@ -84,3 +84,6 @@ func TestReadyzUsesPBMPRequiredInfoMethod(t *testing.T){if runtimeReadinessMetho
 
 
 func TestReadinessUpdatesAggregateMetrics(t *testing.T){s:=testServer(t);r:=httptest.NewRequest("GET","/readyz",nil);w:=httptest.NewRecorder();s.Handler().ServeHTTP(w,r);if w.Code!=http.StatusServiceUnavailable{t.Fatalf("readyz status=%d",w.Code)};r=httptest.NewRequest("GET","/metrics",nil);w=httptest.NewRecorder();s.Handler().ServeHTTP(w,r);body:=w.Body.String();for _,want:=range []string{"botweb_bots_checked 1","botweb_bots_reachable 0"}{if !strings.Contains(body,want){t.Fatalf("missing %q in metrics: %s",want,body)}}}
+
+
+func TestLoginRequiresFormContentType(t *testing.T){s:=testServer(t);s.auth=AuthConfig{ViewerToken:"view"};r:=httptest.NewRequest("POST","http://botweb.local/login",strings.NewReader("token=view"));r.Host="botweb.local";r.Header.Set("Content-Type","text/plain");w:=httptest.NewRecorder();s.Handler().ServeHTTP(w,r);if w.Code!=http.StatusUnsupportedMediaType{t.Fatalf("status=%d, want 415",w.Code)}}
