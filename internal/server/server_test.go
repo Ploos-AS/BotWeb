@@ -121,3 +121,5 @@ func TestDecodeJSONBodyAcceptsSingleValue(t *testing.T){var v map[string]any;r:=
 
 type strictJSONTestRequest struct{ID string `json:"id"`}
 func TestDecodeJSONBodyRejectsUnknownField(t *testing.T){var v strictJSONTestRequest;r:=httptest.NewRequest("POST","/",strings.NewReader("{\"id\":\"x\",\"typo\":true}"));w:=httptest.NewRecorder();if e:=decodeJSONBody(w,r,&v);e==nil{t.Fatal("expected unknown JSON field to be rejected")}}
+
+func TestJSONDecodeErrorReportsOversize(t *testing.T){var v strictJSONTestRequest;r:=httptest.NewRequest("POST","/",strings.NewReader("{\"id\":\""+strings.Repeat("x",5000)+"\"}"));w:=httptest.NewRecorder();e:=decodeJSONBody(w,r,&v);if e==nil{t.Fatal("expected oversized JSON error")};out:=httptest.NewRecorder();writeJSONDecodeError(out,e);if out.Code!=http.StatusRequestEntityTooLarge{t.Fatalf("status=%d, want 413",out.Code)}}
