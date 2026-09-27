@@ -162,3 +162,19 @@ The limiter deliberately does not key state by client IP, forwarded address, use
 BotWeb applies explicit request-size limits in addition to its HTTP timeouts. Browser login form bodies are capped at 4 KiB and oversized login requests return HTTP 413. The HTTP server caps request headers at 16 KiB. These limits are regression-tested and are intended to keep unauthenticated request processing bounded while remaining ample for BotWeb's small session cookie, bearer token, and API headers.
 
 Deployments behind a reverse proxy should configure compatible or stricter edge limits. The application limits remain authoritative even when the proxy permits larger requests.
+
+
+## M2.48 management request contract
+
+BotWeb treats management writes as a strict API boundary before forwarding anything to PBMP.
+
+- Management writes require a parsed media type of `application/json`; valid parameters such as `charset=utf-8` are accepted, malformed or lookalike media types are rejected.
+- JSON request bodies are limited to 4 KiB.
+- A request body must contain exactly one JSON value. Empty bodies, malformed JSON and trailing JSON values are rejected with `400 Bad Request`.
+- Unknown JSON object fields are rejected rather than silently ignored.
+- Bodies exceeding the 4 KiB limit return `413 Request Entity Too Large`.
+- Channel join/part requests require non-empty, non-whitespace `network` and `name` values.
+- Module reload/enable/disable requests require a non-empty, non-whitespace `id`.
+- Invalid requests are rejected at the HTTP boundary and are not forwarded to the bot over PBMP.
+
+Browser login is separate from the JSON management API: it requires the parsed media type `application/x-www-form-urlencoded` and is independently limited to 4 KiB.
