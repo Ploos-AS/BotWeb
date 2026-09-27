@@ -4,4 +4,4 @@ func main(){listen:=flag.String("listen","127.0.0.1:8080","HTTP listen address")
 func authEnabled(a server.AuthConfig)bool{return a.ViewerToken!=""||a.OperatorToken!=""}
 func isLoopbackListen(addr string)bool{host,_,err:=net.SplitHostPort(addr);if err!=nil{return false};ip:=net.ParseIP(host);return host=="localhost"||(ip!=nil&&ip.IsLoopback())}
 
-func newHTTPServer(addr string,h http.Handler)*http.Server{return &http.Server{Addr:addr,Handler:h,ReadHeaderTimeout:5*time.Second,ReadTimeout:15*time.Second,WriteTimeout:30*time.Second,IdleTimeout:60*time.Second}}
+func newHTTPServer(addr string,h http.Handler)*http.Server{return &http.Server{Addr:addr,Handler:h,ReadHeaderTimeout:5*time.Second,ReadTimeout:15*time.Second,WriteTimeout:30*time.Second,IdleTimeout:60*time.Second,MaxHeaderBytes:16<<10}}
