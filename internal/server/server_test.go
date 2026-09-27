@@ -118,3 +118,6 @@ func TestMediaTypeParsing(t *testing.T){for _,tc:=range []struct{ct,want string}
 
 func TestDecodeJSONBodyRejectsTrailingValue(t *testing.T){s:=testServer(t);var v map[string]any;r:=httptest.NewRequest("POST","/",strings.NewReader("{\"id\":\"x\"}{\"id\":\"y\"}"));w:=httptest.NewRecorder();if e:=decodeJSONBody(w,r,&v);e==nil{t.Fatal("expected trailing JSON value to be rejected")};_ = s}
 func TestDecodeJSONBodyAcceptsSingleValue(t *testing.T){var v map[string]any;r:=httptest.NewRequest("POST","/",strings.NewReader("{\"id\":\"x\"}\n"));w:=httptest.NewRecorder();if e:=decodeJSONBody(w,r,&v);e!=nil{t.Fatalf("single JSON value rejected: %v",e)};if v["id"]!="x"{t.Fatalf("id=%v",v["id"])}}
+
+type strictJSONTestRequest struct{ID string `json:"id"`}
+func TestDecodeJSONBodyRejectsUnknownField(t *testing.T){var v strictJSONTestRequest;r:=httptest.NewRequest("POST","/",strings.NewReader("{\"id\":\"x\",\"typo\":true}"));w:=httptest.NewRecorder();if e:=decodeJSONBody(w,r,&v);e==nil{t.Fatal("expected unknown JSON field to be rejected")}}
