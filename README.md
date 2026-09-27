@@ -148,3 +148,10 @@ BotWeb readiness deliberately probes `pbmp.info`. PBMP/1 M0 defines `pbmp.info` 
 BotWeb runs with explicit HTTP server limits: a 5 second request-header timeout, 15 second read timeout, 30 second write timeout, and 60 second idle timeout. These values are regression-tested rather than relying on the unbounded Go HTTP defaults.
 
 The process handles SIGINT and SIGTERM with graceful HTTP shutdown. Active requests receive up to 10 seconds to complete before shutdown returns. A normal `http.ErrServerClosed` result is treated as an expected process stop rather than a fatal server error. This makes the same lifecycle suitable for direct service managers and OCI/container orchestration.
+
+
+## M2.35 login throttling contract
+
+Browser login uses a bounded in-memory global failure limiter. Ten failed credential attempts are allowed in a rolling one-minute window; further invalid credentials receive HTTP 429 with `Retry-After: 60`. A valid credential is still accepted while the failure limiter is active and clears the accumulated failures, avoiding an administrative lockout after an attack or typing mistakes.
+
+The limiter deliberately does not key state by client IP, forwarded address, username, or token. This keeps state bounded, avoids trusting spoofable forwarding headers, and avoids adding identifying or high-cardinality dimensions. Throttled requests are exposed through the authenticated Prometheus endpoint as the label-free counter `botweb_login_throttled_total`.
