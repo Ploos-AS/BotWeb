@@ -78,3 +78,6 @@ func TestBrowserLogoutUsesCSRFHeader(t *testing.T){if !strings.Contains(indexHTM
 
 func TestLoginRejectsCrossOrigin(t *testing.T){s:=testServer(t);s.auth=AuthConfig{ViewerToken:"view"};r:=httptest.NewRequest("POST","http://botweb.local/login",strings.NewReader("token=view"));r.Host="botweb.local";r.Header.Set("Content-Type","application/x-www-form-urlencoded");r.Header.Set("Origin","https://evil.example");w:=httptest.NewRecorder();s.Handler().ServeHTTP(w,r);if w.Code!=http.StatusForbidden{t.Fatalf("status=%d",w.Code)}}
 func TestLoginAcceptsTrustedProxyHTTPSOrigin(t *testing.T){s:=testServer(t);s.auth=AuthConfig{ViewerToken:"view",TrustProxy:true};r:=httptest.NewRequest("POST","http://botweb.local/login",strings.NewReader("token=view"));r.Host="botweb.local";r.Header.Set("Content-Type","application/x-www-form-urlencoded");r.Header.Set("Origin","https://botweb.local");r.Header.Set("X-Forwarded-Proto","https");w:=httptest.NewRecorder();s.Handler().ServeHTTP(w,r);if w.Code!=http.StatusSeeOther{t.Fatalf("status=%d body=%s",w.Code,w.Body.String())}}
+
+
+func TestReadyzUsesPBMPRequiredInfoMethod(t *testing.T){if runtimeReadinessMethod!="pbmp.info"{t.Fatalf("readiness method=%q, want PBMP/1 M0 required method pbmp.info",runtimeReadinessMethod)}}
