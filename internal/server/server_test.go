@@ -187,3 +187,50 @@ func TestRegistryAPIExposesProfileButNotEndpoint(t *testing.T) {
 	if !strings.Contains(w.Body.String(), `"profile":"bot-m0"`) { t.Fatalf("profile missing: %s",w.Body.String()) }
 	if strings.Contains(w.Body.String(), "/secret/path.sock") { t.Fatal("endpoint leaked") }
 }
+
+
+func TestBotAIStatusIsProxiedThroughPBMP(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "pbmp.sock")
+	ln, err := net.Listen("unix", path)
+	if err != nil { t.Fatal(err) }
+	defer ln.Close()
+	methods := make(chan string, 1)
+	go func(){
+		conn, err := ln.Accept(); if err != nil { return }; defer conn.Close()
+		var req struct{ ID, Method string }
+		if json.NewDecoder(bufio.NewReader(conn)).Decode(&req) != nil { return }
+		methods <- req.Method
+		json.NewEncoder(conn).Encode(map[string]any{
+			"pbmp":1,"type":"response","id":req.ID,"ok":true,
+			"result":map[string]any{"botai":map[string]any{"enabled":true,"state":"ready","provider":"test"}},
+		})
+	}()
+	registryPath := filepath.Join(t.TempDir(), "bots.json")
+	body := fmt.Sprintf(`{"bots":[{"id":"x","name":"Example","profile":"bot-m0","transport":"unix","endpoint":%q}]}`, path)
+	if err := os.WriteFile(registryPath, []byte(body), 0600); err != nil { t.Fatal(err) }
+	s, err := New(registryPath); if err != nil { t.Fatal(err) }
+	r := httptest.NewRequest("GET","/api/v1/bots/x/botai",nil)
+	w := httptest.NewRecorder()
+	s.Handler().ServeHTTP(w,r)
+	if w.Code != http.StatusOK { t.Fatalf("status=%d body=%s",w.Code,w.Body.String()) }
+	select {
+	case got := <-methods:
+		if got != "botai.status" { t.Fatalf("method=%q, want botai.status",got) }
+	case <-time.After(time.Second):
+		t.Fatal("PBMP request not observed")
+	}
+	if !strings.Contains(w.Body.String(), `"provider":"test"`) { t.Fatalf("response=%s",w.Body.String()) }
+}
+
+func TestBotAIFrontendDocumentsPrivacyBoundary(t *testing.T) {
+	r:=httptest.NewRequest("GET","/app.js",nil)
+	w:=httptest.NewRecorder()
+	testServer(t).Handler().ServeHTTP(w,r)
+	body:=w.Body.String()
+	for _, want := range []string{"botai.status","Operational metadata only","Conversation content and credentials are not exposed"} {
+		if !strings.Contains(body,want) { t.Fatalf("missing %q",want) }
+	}
+	if strings.Contains(body,"127.0.0.1:8090") || strings.Contains(body,"/v1/chat") {
+		t.Fatal("frontend contains direct BotAI service coupling")
+	}
+}
