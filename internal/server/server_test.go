@@ -1,5 +1,5 @@
 package server
-import("encoding/json";"time";"os";"path/filepath";"net/http";"net/http/httptest";"strings";"testing")
+import("bufio";"encoding/json";"fmt";"time";"os";"path/filepath";"net";"net/http";"net/http/httptest";"strings";"testing")
 func testServer(t *testing.T)*Server{t.Helper();p:=filepath.Join(t.TempDir(),"bots.json");if err:=os.WriteFile(p,[]byte(`{"bots":[{"id":"x","name":"Example","transport":"unix","endpoint":"/secret/path.sock"}]}`),0600);err!=nil{t.Fatal(err)};s,e:=New(p);if e!=nil{t.Fatal(e)};return s}
 func TestIndexAndHeaders(t *testing.T){r:=httptest.NewRequest("GET","/",nil);w:=httptest.NewRecorder();testServer(t).Handler().ServeHTTP(w,r);if w.Code!=200{t.Fatal(w.Code)};if !strings.Contains(w.Body.String(),"PBMP fleet console"){t.Fatal("missing UI")};if w.Header().Get("Content-Security-Policy")==""{t.Fatal("missing CSP")}}
 func TestRegistryDoesNotLeakEndpoint(t *testing.T){r:=httptest.NewRequest("GET","/api/v1/bots",nil);w:=httptest.NewRecorder();testServer(t).Handler().ServeHTTP(w,r);if strings.Contains(w.Body.String(),"secret/path"){t.Fatal("endpoint leaked")}}
@@ -135,3 +135,55 @@ func TestMethodNotAllowedIncludesAllow(t *testing.T){s:=testServer(t);for _,tc:=
 func TestJSONEndpointsDeclareJSON(t *testing.T){s:=testServer(t);for _,path:=range []string{"/healthz","/api/v1/bots"}{r:=httptest.NewRequest("GET",path,nil);w:=httptest.NewRecorder();s.Handler().ServeHTTP(w,r);if w.Code!=http.StatusOK{t.Fatalf("GET %s status=%d, want 200",path,w.Code)};if got:=w.Header().Get("Content-Type");got!="application/json"{t.Fatalf("GET %s Content-Type=%q, want application/json",path,got)}}}
 
 func TestJSONDecodeErrorsAreMachineReadable(t *testing.T){for _,tc:=range []struct{body string;status int;message string}{{"{",http.StatusBadRequest,"invalid request"},{strings.Repeat("x",4097),http.StatusRequestEntityTooLarge,"request too large"}}{r:=httptest.NewRequest("POST","/",strings.NewReader(tc.body));w:=httptest.NewRecorder();var v struct{ID string `json:"id"`};e:=decodeJSONBody(w,r,&v);if e==nil{t.Fatal("expected decode error")};writeJSONDecodeError(w,e);if w.Code!=tc.status{t.Fatalf("status=%d, want %d",w.Code,tc.status)};if got:=w.Header().Get("Content-Type");got!="application/json"{t.Fatalf("Content-Type=%q",got)};var out map[string]string;if e:=json.Unmarshal(w.Body.Bytes(),&out);e!=nil{t.Fatalf("response is not JSON: %v",e)};if out["error"]!=tc.message{t.Fatalf("error=%q, want %q",out["error"],tc.message)}}}
+
+
+func testPBMPInfoServer(t *testing.T, wantMethod string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "pbmp.sock")
+	ln, err := net.Listen("unix", path)
+	if err != nil { t.Fatal(err) }
+	t.Cleanup(func(){ ln.Close() })
+	go func(){
+		conn, err := ln.Accept()
+		if err != nil { return }
+		defer conn.Close()
+		var req struct{ PBMP int `json:"pbmp"`; Type, ID, Method string }
+		if err := json.NewDecoder(bufio.NewReader(conn)).Decode(&req); err != nil { return }
+		if req.Method != wantMethod {
+			json.NewEncoder(conn).Encode(map[string]any{"pbmp":1,"type":"response","id":req.ID,"ok":false,"error":"wrong method"})
+			return
+		}
+		json.NewEncoder(conn).Encode(map[string]any{"pbmp":1,"type":"response","id":req.ID,"ok":true,"result":map[string]any{"method":req.Method}})
+	}()
+	return path
+}
+
+func TestInfoRouteUsesProfileSpecificPBMPMethod(t *testing.T) {
+	for _, tc := range []struct{profile, want string}{
+		{"bot-m0","bot.info"},
+		{"endpoint-m0","endpoint.info"},
+	} {
+		t.Run(tc.profile, func(t *testing.T){
+			socket := testPBMPInfoServer(t, tc.want)
+			path := filepath.Join(t.TempDir(), "bots.json")
+			body := fmt.Sprintf(`{"bots":[{"id":"x","name":"Example","profile":%q,"transport":"unix","endpoint":%q}]}`, tc.profile, socket)
+			if err := os.WriteFile(path, []byte(body), 0600); err != nil { t.Fatal(err) }
+			s, err := New(path); if err != nil { t.Fatal(err) }
+			r := httptest.NewRequest("GET","/api/v1/bots/x/info",nil)
+			w := httptest.NewRecorder()
+			s.Handler().ServeHTTP(w,r)
+			if w.Code != http.StatusOK { t.Fatalf("status=%d body=%s",w.Code,w.Body.String()) }
+			if !strings.Contains(w.Body.String(), tc.want) { t.Fatalf("response=%s, want method %s",w.Body.String(),tc.want) }
+		})
+	}
+}
+
+func TestRegistryAPIExposesProfileButNotEndpoint(t *testing.T) {
+	s := testServer(t)
+	r := httptest.NewRequest("GET","/api/v1/bots",nil)
+	w := httptest.NewRecorder()
+	s.Handler().ServeHTTP(w,r)
+	if w.Code != http.StatusOK { t.Fatal(w.Code) }
+	if !strings.Contains(w.Body.String(), `"profile":"bot-m0"`) { t.Fatalf("profile missing: %s",w.Body.String()) }
+	if strings.Contains(w.Body.String(), "/secret/path.sock") { t.Fatal("endpoint leaked") }
+}
